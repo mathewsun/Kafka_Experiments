@@ -1,0 +1,126 @@
+version: '1.0'
+
+volumes:
+
+  pgdata:
+    driver: local
+    driver_opts:
+      type: 'none'
+      o: 'bind'
+      device: C:/work/Kafka_Experiments/Docker/volumes/postgres/data
+
+  pgadmindata:
+    driver: local
+    driver_opts:
+      type: 'none'
+      o: 'bind'
+      device: C:/work/Kafka_Experiments/Docker/volumes/pgadmin
+  
+  redisdata:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: C:/work/Kafka_Experiments/Docker/volumes/redis/data
+
+  kafka-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: C:/work/Kafka_Experiments/Docker/volumes/kafka/data
+
+  kafka-logs:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: C:/work/Kafka_Experiments/Docker/volumes/kafka/logs
+
+  zk-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: C:/work/Kafka_Experiments/Docker/volumes/zk/data
+
+  zk-logs:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: C:/work/Kafka_Experiments/Docker/volumes/zk/logs
+
+services:
+  postgres:
+    image: "postgres:17"
+    restart: always
+    environment:
+      - POSTGRES_PASSWORD=qwe
+      - POSTGRES_USER=developer
+      - PGDATA=/var/lib/postgresql/data
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - 5432:5432
+    command: ["-c", "max_connections=200"]
+
+  redis:
+    image: "redis:7"
+    restart: always
+    volumes:
+      - redisdata:/data
+    ports:
+      - 6379:6379
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+    volumes:
+      - zk-data:/var/lib/zookeeper/data
+      - zk-logs:/var/lib/zookeeper/log
+    restart: always
+
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:19092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_MIN_INSYNC_REPLICAS: 1
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+      - kafka-logs:/var/log/kafka
+    ports:
+      - 9092:9092
+    depends_on:
+      - zookeeper
+    restart: always
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=local
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:19092
+      - KAFKA_CLUSTERS_0_ZOOKEEPER=zookeeper:2181
+    ports:
+      - 8080:8080
+    depends_on:
+      - zookeeper
+      - kafka
+    restart: always
+
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    restart: always
+    environment:
+      - REDIS_HOSTS=redis
+    ports:
+      - 8081:8081
+
+  
+  
